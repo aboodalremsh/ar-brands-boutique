@@ -15,6 +15,7 @@ import {
 import { Product } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { validateProductData } from '@/lib/validations/product';
 
 export default function Products() {
   const { data: products, isLoading } = useProducts();
@@ -73,9 +74,10 @@ export default function Products() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const productData = {
-      name: formData.name,
-      description: formData.description || null,
+    // Parse and prepare product data
+    const rawProductData = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
       price: parseFloat(formData.price),
       category_id: formData.category_id || null,
       images: formData.images.split(',').map(s => s.trim()).filter(Boolean),
@@ -84,6 +86,16 @@ export default function Products() {
       is_available: formData.is_available,
       is_featured: formData.is_featured,
     };
+
+    // Validate product data using Zod schema
+    const validation = validateProductData(rawProductData);
+    
+    if (validation.success === false) {
+      validation.errors.forEach(error => toast.error(error));
+      return;
+    }
+
+    const productData = validation.data;
 
     try {
       if (editingProduct) {
